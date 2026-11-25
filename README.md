@@ -1,6 +1,6 @@
 # HM-SEC
 
-A portable local deployment of the [Humane](https://github.com/abhiram-ar/humane-backend) social application, packaged with Docker Compose and an optional Kubernetes/k3d lab.
+A portable local deployment of the social application, packaged with Docker Compose and an optional Kubernetes/k3d lab.
 
 HM-SEC brings the frontend, ten backend services, gateway, databases, and deployment tooling into one repository. The application is derived from Humane; HM-SEC focuses on packaging, local deployment, and infrastructure. See [THIRD_PARTY.md](THIRD_PARTY.md) and the original [ISC license](LICENSE).
 
