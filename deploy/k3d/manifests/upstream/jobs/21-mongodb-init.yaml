@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mongodb-init
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: mongodb-init
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: mongodb-init
+        hmsec.network/zone: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      containers:
+        - name: mongodb-init
+          image: mongo:7
+          command: ["/bin/sh", "/scripts/mongo-init.sh"]
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: hm-sec-init-scripts
+            defaultMode: 0555

@@ -1,0 +1,23 @@
+{
+  "source": "k8s",
+  "files": {
+    "base/00-namespace.yaml": "98093100f2844974ac58de13c5a6385c9e457ad81b2a8c71476487542bcefa3c",
+    "base/01-rbac.yaml": "bd7e745d11e7a6f9620c6845b2c1ef019ce13597fa26ee8739f76495775a5dac",
+    "base/10-data-services.yaml": "b47c690140c5b3e6aaa2e772d2ea344d9778b8ff4b9082b5ec518b9dd8842d79",
+    "base/11-stateful-data.yaml": "8bbdf9f1ba21302eb03a4bb18d4a809de02ec6acae3d98062e3735a22727a85b",
+    "base/12-media-pvc.yaml": "1bfa9456e9a7f69ac4a2c05e69620b1de917f1ede4b0f6fd23ea6122d919fe14",
+    "base/13-init-scripts-configmap.yaml": "24a11d5f759f1441b875759996ada10b379ec5f36c7a390dbcefd8a8ca6a03a6",
+    "jobs/20-postgres-init.yaml": "2257b41b48fac72df0548f381d456cdc6d30cd71489d951e3098ffb3260ceda8",
+    "jobs/21-mongodb-init.yaml": "636533037bf5ad21aa6153215b0ac75fb3279a7366d3f88f0f2dc5ca849edb44",
+    "jobs/22-kafka-init.yaml": "27c1803faf9ba8ec3cbb9cb1fd9e2e52f775e5cd281770d3235ddbe296ed7440",
+    "jobs/23-user-db-init.yaml": "dadfc68e5787313b2107a8f29b37b373975077d35c0f0be6e577fafa90c7b7d2",
+    "jobs/24-reward-db-init.yaml": "873948fd4bfbb3a1ecf915bdfeeef85ae9009e6324df08d06f26e9f606729824",
+    "jobs/25-user-seed.yaml": "fd544299d576e8a444ab4059cb28aeecb95dbe7b70e4d4cd6913ccb727422537",
+    "jobs/26-reward-score-init.yaml": "8aad659e0cf3d165d0e7bf327660ccefd53386cca34260d8e7d6434796074464",
+    "jobs/27-media-init.yaml": "2556d8f299f3353c13a8a81781853e3aa40e692addf7c529ec84184888b1d6dc",
+    "apps/30-apps.yaml": "93769464c8174836e478eb215f38845ca2fb95e7b88300f95548f8a108576d3e",
+    "apps/31-edge.yaml": "60927a42bcb8e28ffdb13f12c0b3c41bc956cb55a31eede9961a0c2c14328ee6",
+    "hardening/40-network-policies.yaml": "7e1c6b952ff57bb1b080d885ad3144bac2a32efddb9dacac818cadfa4cf3dd08",
+    "ops/60-backups.yaml": "318556e902819cb809cb1f761ae95fa113f576fba6fb9676f76aa6eb063091e3"
+  }
+}

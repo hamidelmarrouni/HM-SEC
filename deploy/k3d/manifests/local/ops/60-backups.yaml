@@ -1,0 +1,138 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: hm-sec-backups
+  namespace: hm-sec
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: hm-sec
+spec:
+  schedule: 17 2 * * *
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+            hmsec.network/zone: app
+        spec:
+          restartPolicy: Never
+          serviceAccountName: hm-sec-app
+          automountServiceAccountToken: false
+          containers:
+          - name: postgres-backup
+            image: postgres:16
+            env:
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: hm-sec-db-secrets
+                  key: HMSEC_POSTGRES_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: hm-sec-db-secrets
+                  key: HMSEC_POSTGRES_PASSWORD
+            - name: PGDATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: hm-sec-db-secrets
+                  key: HMSEC_POSTGRES_DB
+            command:
+            - /bin/sh
+            - -ec
+            args:
+            - "set -eu\nmkdir -p /backup/postgres\nPGHOST=\"postgres-0.postgres-hs.hm-sec.svc.cluster.local\"\
+              \n\necho \"[backup] waiting for PostgreSQL at ${PGHOST}:5432\"\nattempts=0\n\
+              until pg_isready -h \"$PGHOST\" -p 5432 -U \"$PGUSER\" -d \"$PGDATABASE\"\
+              \ -t 2 >/dev/null 2>&1; do\n  attempts=$((attempts + 1))\n  if [ \"\
+              $attempts\" -ge 60 ]; then\n    echo \"[backup] ERROR: PostgreSQL did\
+              \ not become ready within 120 seconds\" >&2\n    exit 1\n  fi\n  sleep\
+              \ 2\ndone\n\nfile=\"/backup/postgres/hm_sec-$(date -u +%Y%m%dT%H%M%SZ).dump\"\
+              \necho \"[backup] PostgreSQL ready; creating $file\"\npg_dump -h \"\
+              $PGHOST\" -p 5432 -U \"$PGUSER\" -d \"$PGDATABASE\" -Fc -f \"$file\"\
+              \n\ntest -s \"$file\"\necho \"[backup] verified non-empty dump: $file\"\
+              \n\nfind /backup/postgres -type f -mtime +7 -delete\necho \"backup=$file\"\
+              \n"
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: hm-sec-backups
+  suspend: true
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongodb-backup
+  namespace: hm-sec
+spec:
+  schedule: 47 2 * * *
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: mongodb-backup
+            hmsec.network/zone: app
+        spec:
+          restartPolicy: Never
+          serviceAccountName: hm-sec-app
+          automountServiceAccountToken: false
+          containers:
+          - name: mongodb-backup
+            image: mongo:7
+            command:
+            - /bin/sh
+            - -ec
+            args:
+            - 'mkdir -p /backup/mongodb
+
+              file="/backup/mongodb/hm_sec-$(date -u +%Y%m%dT%H%M%SZ).archive.gz"
+
+              mongodump --uri=''mongodb://mongodb:27017/?replicaSet=rs0'' --archive="$file"
+              --gzip
+
+              find /backup/mongodb -type f -mtime +7 -delete
+
+              echo "backup=$file"
+
+              '
+            volumeMounts:
+            - name: backup
+              mountPath: /backup
+            imagePullPolicy: IfNotPresent
+            resources:
+              requests:
+                cpu: 5m
+                memory: 16Mi
+          volumes:
+          - name: backup
+            persistentVolumeClaim:
+              claimName: hm-sec-backups
+  suspend: true

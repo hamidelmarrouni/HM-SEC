@@ -1,0 +1,37 @@
+# Dependencies and generated output
+**/node_modules/
+**/generated/
+**/dist/
+**/__pycache__/
+*.pyc
+*.tsbuildinfo
+# Secrets and machine state
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+runtime/*
+!runtime/media/
+runtime/media/*
+!runtime/media/.gitkeep
+deploy/k3d/runtime/
+deploy/k3d/bin/
+deploy/k3d/k3d-config/
+deploy/k3d/local.env
+*.key
+*.pem
+*.csr
+*.crt
+*kubeconfig*
+*cookies*.txt
+*.log
+*.dump
+*.tar
+*.zip
+.DS_Store
+Thumbs.db
+.agents/
+.codex/
+.aws/

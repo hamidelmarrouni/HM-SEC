@@ -1,0 +1,317 @@
+[
+  {
+    "path": "base/00-namespace.yaml",
+    "kind": "Namespace",
+    "name": "hm-sec"
+  },
+  {
+    "path": "base/01-rbac.yaml",
+    "kind": "ServiceAccount",
+    "name": "hm-sec-app"
+  },
+  {
+    "path": "base/01-rbac.yaml",
+    "kind": "ServiceAccount",
+    "name": "hm-sec-ops-reader"
+  },
+  {
+    "path": "base/01-rbac.yaml",
+    "kind": "Role",
+    "name": "hm-sec-ops-readonly"
+  },
+  {
+    "path": "base/01-rbac.yaml",
+    "kind": "RoleBinding",
+    "name": "hm-sec-ops-readonly"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "postgres"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "postgres-hs"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "mongodb"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "mongodb-hs"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "redis"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "redis-hs"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "kafka"
+  },
+  {
+    "path": "base/10-data-services.yaml",
+    "kind": "Service",
+    "name": "kafka-hs"
+  },
+  {
+    "path": "base/11-stateful-data.yaml",
+    "kind": "StatefulSet",
+    "name": "postgres"
+  },
+  {
+    "path": "base/11-stateful-data.yaml",
+    "kind": "StatefulSet",
+    "name": "mongodb"
+  },
+  {
+    "path": "base/11-stateful-data.yaml",
+    "kind": "StatefulSet",
+    "name": "redis"
+  },
+  {
+    "path": "base/11-stateful-data.yaml",
+    "kind": "StatefulSet",
+    "name": "kafka"
+  },
+  {
+    "path": "base/12-media-pvc.yaml",
+    "kind": "PersistentVolumeClaim",
+    "name": "hm-sec-media"
+  },
+  {
+    "path": "base/13-init-scripts-configmap.yaml",
+    "kind": "ConfigMap",
+    "name": "hm-sec-init-scripts"
+  },
+  {
+    "path": "jobs/20-postgres-init.yaml",
+    "kind": "Job",
+    "name": "postgres-init"
+  },
+  {
+    "path": "jobs/21-mongodb-init.yaml",
+    "kind": "Job",
+    "name": "mongodb-init"
+  },
+  {
+    "path": "jobs/22-kafka-init.yaml",
+    "kind": "Job",
+    "name": "kafka-init"
+  },
+  {
+    "path": "jobs/23-user-db-init.yaml",
+    "kind": "Job",
+    "name": "user-db-init"
+  },
+  {
+    "path": "jobs/24-reward-db-init.yaml",
+    "kind": "Job",
+    "name": "reward-db-init"
+  },
+  {
+    "path": "jobs/25-user-seed.yaml",
+    "kind": "Job",
+    "name": "user-seed"
+  },
+  {
+    "path": "jobs/26-reward-score-init.yaml",
+    "kind": "Job",
+    "name": "reward-score-init"
+  },
+  {
+    "path": "jobs/27-media-init.yaml",
+    "kind": "Job",
+    "name": "media-init"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "user-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "user-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "writer-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "writer-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "query-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "query-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "feed-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "feed-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "chat-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "chat-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "notification-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "notification-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "email-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "email-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "moderation-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "moderation-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "reward-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "reward-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Service",
+    "name": "media-service"
+  },
+  {
+    "path": "apps/30-apps.yaml",
+    "kind": "Deployment",
+    "name": "media-service"
+  },
+  {
+    "path": "apps/31-edge.yaml",
+    "kind": "Service",
+    "name": "nginx-gateway"
+  },
+  {
+    "path": "apps/31-edge.yaml",
+    "kind": "Deployment",
+    "name": "nginx-gateway"
+  },
+  {
+    "path": "apps/31-edge.yaml",
+    "kind": "Service",
+    "name": "frontend"
+  },
+  {
+    "path": "apps/31-edge.yaml",
+    "kind": "Deployment",
+    "name": "frontend"
+  },
+  {
+    "path": "apps/31-edge.yaml",
+    "kind": "Ingress",
+    "name": "hm-sec"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "default-deny-all"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "allow-dns"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "edge-ingress-from-traefik"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "gateway-to-app"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "app-ingress"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "app-egress-internal"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "data-ingress-from-app-and-data"
+  },
+  {
+    "path": "hardening/40-network-policies.yaml",
+    "kind": "NetworkPolicy",
+    "name": "data-egress-internal"
+  },
+  {
+    "path": "ops/60-backups.yaml",
+    "kind": "PersistentVolumeClaim",
+    "name": "hm-sec-backups"
+  },
+  {
+    "path": "ops/60-backups.yaml",
+    "kind": "CronJob",
+    "name": "postgres-backup"
+  },
+  {
+    "path": "ops/60-backups.yaml",
+    "kind": "CronJob",
+    "name": "mongodb-backup"
+  }
+]

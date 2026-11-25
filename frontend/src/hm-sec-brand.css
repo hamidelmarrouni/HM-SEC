@@ -1,0 +1,10 @@
+/* HM_SEC branding — visual-only overrides. Internal Humane identifiers stay untouched. */
+:root {
+  --hmsec-primary: #2563eb;
+  --hmsec-primary-hover: #1d4ed8;
+  --hmsec-primary-light: #60a5fa;
+  --hmsec-primary-soft: #dbeafe;
+}
+
+/* One inherited standard Tailwind green utility remains in a message-status icon. */
+.text-green-800 { color: #1e40af !important; }

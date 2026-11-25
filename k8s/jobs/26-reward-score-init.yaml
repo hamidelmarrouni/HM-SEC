@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: reward-score-init
+  namespace: hm-sec
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: reward-score-init
+        hmsec.network/zone: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      containers:
+        - name: reward-score-init
+          image: postgres:16
+          env:
+            - name: PGUSER
+              valueFrom: {secretKeyRef: {name: hm-sec-db-secrets, key: HMSEC_POSTGRES_USER}}
+            - name: PGPASSWORD
+              valueFrom: {secretKeyRef: {name: hm-sec-db-secrets, key: HMSEC_POSTGRES_PASSWORD}}
+            - name: PGDATABASE
+              valueFrom: {secretKeyRef: {name: hm-sec-db-secrets, key: HMSEC_POSTGRES_DB}}
+            - name: HMSEC_SEED_EMAIL
+              valueFrom: {secretKeyRef: {name: hm-sec-seed-secrets, key: HMSEC_SEED_EMAIL}}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              psql -v ON_ERROR_STOP=1 -h postgres -U "$PGUSER" -d "$PGDATABASE" -v main_email="$HMSEC_SEED_EMAIL" <<'SQL'
+              INSERT INTO reward_service."HumaneScore" ("userId", "score")
+              SELECT id, 0
+              FROM user_service."User"
+              WHERE email IN (:'main_email', 'brahim@example.test', 'meryam@example.test', 'ihssan@example.test')
+              ON CONFLICT ("userId") DO NOTHING;
+              SQL

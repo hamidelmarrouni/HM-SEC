@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-init
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: postgres-init
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: postgres-init
+        hmsec.network/zone: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      containers:
+      - name: postgres-init
+        image: postgres:16
+        env:
+        - name: PGUSER
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_PASSWORD
+        - name: PGDATABASE
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_DB
+        command:
+        - /bin/sh
+        - -ec
+        args:
+        - "until pg_isready -h postgres -U \"$PGUSER\" -d \"$PGDATABASE\"; do sleep\
+          \ 5; done\npsql -v ON_ERROR_STOP=1 -h postgres -U \"$PGUSER\" -d \"$PGDATABASE\"\
+          \ \\\n  -c 'CREATE SCHEMA IF NOT EXISTS user_service; CREATE SCHEMA IF NOT\
+          \ EXISTS reward_service;'\n"
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+  activeDeadlineSeconds: 3600

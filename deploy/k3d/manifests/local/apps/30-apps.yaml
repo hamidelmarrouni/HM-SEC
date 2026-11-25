@@ -1,0 +1,1159 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: user-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: user-service
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: user-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+        app.kubernetes.io/name: user-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] postgres:5432"; until nc -z postgres 5432; do sleep 5; done;
+          echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: user-service
+        image: hm-sec/user-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3001
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3001'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-user-service
+        - name: HMSEC_POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_USER
+        - name: HMSEC_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_PASSWORD
+        - name: HMSEC_POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_DB
+        - name: POSTGRES_URI
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=user_service
+        - name: DATABASE_URL
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=user_service
+        startupProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: writer-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: writer-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: writer-service
+  ports:
+  - name: http
+    port: 3002
+    targetPort: 3002
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: writer-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: writer-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: writer-service
+  template:
+    metadata:
+      labels:
+        app: writer-service
+        app.kubernetes.io/name: writer-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] mongodb:27017"; until nc -z mongodb 27017; do sleep 5; done;
+          echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: writer-service
+        image: hm-sec/writer-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3002
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3002'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-writer-service
+        - name: MONGODB_URI
+          value: mongodb://mongodb:27017/hm_sec_writer?replicaSet=rs0
+        startupProbe:
+          httpGet:
+            path: /api/v1/writer/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/writer/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/writer/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: query-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: query-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: query-service
+  ports:
+  - name: http
+    port: 3009
+    targetPort: 3009
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: query-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: query-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: query-service
+  template:
+    metadata:
+      labels:
+        app: query-service
+        app.kubernetes.io/name: query-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] mongodb:27017"; until nc -z mongodb 27017; do sleep 5; done;
+          echo "[wait] user-service:3001"; until nc -z user-service 3001; do sleep
+          5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: query-service
+        image: hm-sec/query-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3009
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3009'
+        - name: MONGODB_URI
+          value: mongodb://mongodb:27017/hm_sec_writer?replicaSet=rs0
+        startupProbe:
+          httpGet:
+            path: /api/v1/query/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/query/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/query/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feed-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: feed-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: feed-service
+  ports:
+  - name: http
+    port: 3003
+    targetPort: 3003
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feed-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: feed-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: feed-service
+  template:
+    metadata:
+      labels:
+        app: feed-service
+        app.kubernetes.io/name: feed-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] mongodb:27017"; until nc -z mongodb 27017; do sleep 5; done;
+          echo "[wait] redis:6379"; until nc -z redis 6379; do sleep 5; done; echo
+          "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done; echo "[wait]
+          query-service:3009"; until nc -z query-service 3009; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: feed-service
+        image: hm-sec/feed-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3003
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3003'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-feed-service
+        - name: MONGODB_URI
+          value: mongodb://mongodb:27017/hm_sec_feed?replicaSet=rs0
+        - name: REDIS_URL
+          value: redis://redis:6379/0
+        startupProbe:
+          httpGet:
+            path: /api/v1/feed/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/feed/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/feed/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: chat-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: chat-service
+  ports:
+  - name: http
+    port: 3004
+    targetPort: 3004
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: chat-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: chat-service
+  template:
+    metadata:
+      labels:
+        app: chat-service
+        app.kubernetes.io/name: chat-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] mongodb:27017"; until nc -z mongodb 27017; do sleep 5; done;
+          echo "[wait] redis:6379"; until nc -z redis 6379; do sleep 5; done; echo
+          "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done; echo "[wait]
+          query-service:3009"; until nc -z query-service 3009; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: chat-service
+        image: hm-sec/chat-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3004
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3004'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-chat-service
+        - name: MONGODB_URI
+          value: mongodb://mongodb:27017/hm_sec_chat?replicaSet=rs0
+        - name: REDIS_URL
+          value: redis://redis:6379/1
+        startupProbe:
+          httpGet:
+            path: /api/v1/chat/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/chat/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/chat/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: notification-service
+  ports:
+  - name: http
+    port: 3005
+    targetPort: 3005
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: notification-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+        app.kubernetes.io/name: notification-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] mongodb:27017"; until nc -z mongodb 27017; do sleep 5; done;
+          echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done; echo
+          "[wait] query-service:3009"; until nc -z query-service 3009; do sleep 5;
+          done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: notification-service
+        image: hm-sec/notification-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3005
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3005'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-notification-service
+        - name: MONGODB_URI
+          value: mongodb://mongodb:27017/hm_sec_notification?replicaSet=rs0
+        startupProbe:
+          httpGet:
+            path: /api/v1/notification/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/notification/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/notification/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: email-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: email-service
+  ports:
+  - name: http
+    port: 3006
+    targetPort: 3006
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: email-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: email-service
+  template:
+    metadata:
+      labels:
+        app: email-service
+        app.kubernetes.io/name: email-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: email-service
+        image: hm-sec/email-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3006
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3006'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-email-service
+        startupProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moderation-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: moderation-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: moderation-service
+  ports:
+  - name: http
+    port: 3007
+    targetPort: 3007
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: moderation-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: moderation-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: moderation-service
+  template:
+    metadata:
+      labels:
+        app: moderation-service
+        app.kubernetes.io/name: moderation-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: moderation-service
+        image: hm-sec/moderation-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3007
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3007'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-moderation-service
+        startupProbe:
+          httpGet:
+            path: /api/v1/moderation/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/moderation/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/moderation/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reward-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: reward-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: reward-service
+  ports:
+  - name: http
+    port: 3008
+    targetPort: 3008
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reward-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: reward-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: reward-service
+  template:
+    metadata:
+      labels:
+        app: reward-service
+        app.kubernetes.io/name: reward-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+      - name: wait-for-dependencies
+        image: busybox:1.36
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/sh
+        - -ec
+        - echo "[wait] postgres:5432"; until nc -z postgres 5432; do sleep 5; done;
+          echo "[wait] kafka:9092"; until nc -z kafka 9092; do sleep 5; done; echo
+          "[wait] query-service:3009"; until nc -z query-service 3009; do sleep 5;
+          done
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+      containers:
+      - name: reward-service
+        image: hm-sec/reward-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3008
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        - secretRef:
+            name: hm-sec-app-secrets
+        env:
+        - name: PORT
+          value: '3008'
+        - name: KAFKA_CLIENT_ID
+          value: hmsec-reward-service
+        - name: HMSEC_POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_USER
+        - name: HMSEC_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_PASSWORD
+        - name: HMSEC_POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_DB
+        - name: POSTGRES_URI
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=reward_service
+        - name: DATABASE_URL
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=reward_service
+        startupProbe:
+          httpGet:
+            path: /api/v1/reward/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/reward/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/reward/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: media-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: media-service
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: media-service
+  ports:
+  - name: http
+    port: 3010
+    targetPort: 3010
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: media-service
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: media-service
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: app
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: media-service
+  template:
+    metadata:
+      labels:
+        app: media-service
+        app.kubernetes.io/name: media-service
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: app
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers: []
+      containers:
+      - name: media-service
+        image: hm-sec/media-service:docker-v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 3010
+          name: http
+        envFrom:
+        - configMapRef:
+            name: hm-sec-config
+        env:
+        - name: PORT
+          value: '3010'
+        - name: HMSEC_MEDIA_DIR
+          value: /data/media
+        startupProbe:
+          httpGet:
+            path: /api/v1/media/health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 180
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /api/v1/media/health
+            port: http
+          periodSeconds: 15
+          failureThreshold: 5
+          timeoutSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /api/v1/media/health
+            port: http
+          periodSeconds: 60
+          failureThreshold: 5
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: media
+          mountPath: /data/media
+      volumes:
+      - name: media
+        persistentVolumeClaim:
+          claimName: hm-sec-media

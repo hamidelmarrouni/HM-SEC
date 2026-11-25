@@ -1,0 +1,213 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gateway
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-gateway
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: edge
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: nginx-gateway
+  template:
+    metadata:
+      labels:
+        app: nginx-gateway
+        app.kubernetes.io/name: nginx-gateway
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: edge
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-api-services
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              for hp in user-service:3001 writer-service:3002 feed-service:3003 chat-service:3004 notification-service:3005 reward-service:3008 query-service:3009 media-service:3010; do
+                host="${hp%:*}"; port="${hp#*:}"; echo "[wait] $hp"; until nc -z "$host" "$port"; do sleep 2; done
+              done
+      containers:
+        - name: nginx-gateway
+          image: hm-sec/nginx-gateway:k8s-v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          startupProbe:
+            httpGet:
+              path: /hmsec-health
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /hmsec-health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /hmsec-health
+              port: http
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hm-sec
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 5173
+      targetPort: 5173
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: hm-sec
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: hm-sec
+    hmsec.network/zone: edge
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/part-of: hm-sec
+        hmsec.network/zone: edge
+    spec:
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: frontend
+          image: hm-sec/frontend:k8s-v1
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: hm-sec-config
+          ports:
+            - containerPort: 5173
+              name: http
+          startupProbe:
+            httpGet:
+              path: /hmsec-frontend-health
+              port: http
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /hmsec-frontend-health
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /hmsec-frontend-health
+              port: http
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hm-sec
+  namespace: hm-sec
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-gateway
+                port:
+                  number: 8080
+          - path: /media
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-gateway
+                port:
+                  number: 8080
+          - path: /hmsec-health
+            pathType: Exact
+            backend:
+              service:
+                name: nginx-gateway
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 5173

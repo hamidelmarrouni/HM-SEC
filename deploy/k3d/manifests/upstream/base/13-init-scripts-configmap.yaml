@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hm-sec-init-scripts
+  namespace: hm-sec
+data:
+  mongo-init.sh: |
+    #!/bin/sh
+    set -eu
+    desiredHost='mongodb-0.mongodb-hs.hm-sec.svc.cluster.local:27017'
+    echo "[mongo-init] waiting for mongodb:27017"
+    until mongosh --host mongodb:27017 --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 1)' >/dev/null 2>&1; do sleep 2; done
+    mongosh --host mongodb:27017 --quiet <<JS
+    const desiredHost = '${desiredHost}';
+    let initialized = true;
+    let cfg;
+    try { cfg = rs.conf(); } catch (e) { initialized = false; }
+    if (!initialized) {
+      print('[mongo-init] initiating rs0');
+      rs.initiate({_id: 'rs0', members: [{_id: 0, host: desiredHost}]});
+    } else if (!cfg.members || cfg.members.length !== 1 || cfg.members[0].host !== desiredHost) {
+      print('[mongo-init] reconfiguring rs0 member to ' + desiredHost);
+      cfg.members = [{_id: 0, host: desiredHost}];
+      cfg.version = (cfg.version || 1) + 1;
+      rs.reconfig(cfg, {force: true});
+    } else {
+      print('[mongo-init] rs0 member already correct');
+    }
+    JS
+    echo "[mongo-init] waiting for PRIMARY"
+    i=0
+    until mongosh --host mongodb:27017 --quiet --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' >/dev/null 2>&1; do
+      i=$((i+1)); [ "$i" -ge 60 ] && { echo "rs0 did not become PRIMARY" >&2; exit 1; }; sleep 2;
+    done
+    echo "[mongo-init] rs0 PRIMARY ready"
+  kafka-init.sh: |
+    #!/bin/sh
+    set -eu
+    topics='user.password-recovery-request.events
+    user.signup.events
+    user.profile.events
+    friendship.events
+    post.create.events
+    post.updated.events
+    post.deleted.events
+    comment.created.events
+    comment.delted.events
+    comment.like.request
+    comment.unlike.request
+    comment.liked.events
+    comment.unliked.events
+    comment.liked.by.post.author.events
+    moderation.events
+    moderation.retry.events
+    reward.events
+    message.events
+    message.special.events'
+    echo "[kafka-init] waiting for kafka:9092"
+    i=0
+    until /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do
+      i=$((i+1)); [ "$i" -ge 90 ] && { echo "Kafka did not become ready" >&2; exit 1; }; sleep 2;
+    done
+    echo "$topics" | while IFS= read -r topic; do
+      [ -n "$topic" ] || continue
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic "$topic" --partitions 1 --replication-factor 1 >/dev/null
+    done
+    echo "[kafka-init] topics ready"

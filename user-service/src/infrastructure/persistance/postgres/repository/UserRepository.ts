@@ -1,0 +1,288 @@
+import { User } from '@domain/entities/user.entity';
+import { GetUserDTO, AdminGetUserResponseDTO } from '@application/DTO-mapper/admin/getUsers.dto';
+import { createUserDTO } from '@application/DTO-mapper/user/createUser.dto';
+import { googleAuthDTO } from '@application/DTO-mapper/user/googleAuth.dto';
+import { IUserRepository } from '@ports/IUserRepository';
+import db from '../prisma-client';
+
+export class PostresUserRepository implements IUserRepository {
+   findUsersLoggedInXTime(startTimeInMs: number): Promise<number> {
+      const startTime = new Date();
+      startTime.setTime(startTime.getTime() - startTimeInMs);
+
+      const res = db.user.count({ where: { lastLoginTime: { gt: startTime } } });
+      return res;
+   }
+   findTotalUsers = async (endTime: Date): Promise<number> => {
+      return await db.user.count({ where: { createdAt: { lte: endTime } } });
+   };
+   userSingupsHistory = async (): Promise<{ month: string; count: number }[]> => {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+
+      const results = [];
+
+      for (let i = 0; i < 6; i++) {
+         const month = new Date(currentYear, currentDate.getMonth() - i, 1);
+         const nextMonth = new Date(currentYear, currentDate.getMonth() - i + 1, 1);
+
+         const count = await db.user.count({
+            where: {
+               createdAt: {
+                  gte: month,
+                  lt: nextMonth,
+               },
+            },
+         });
+
+         results.unshift({
+            month: month.toLocaleString('default', { month: 'long' }),
+            count: count,
+         });
+      }
+
+      return results;
+   };
+   updateLastLoginedAt = async (userId: string, time: Date = new Date()): Promise<void> => {
+      // this utility is not of high priority so gradecully handling errors
+      try {
+         await db.user.update({ where: { id: userId }, data: { lastLoginTime: time } });
+      } catch (error) {
+         throw new Error('Method not implemented.');
+      }
+   };
+   create = async (dto: createUserDTO): Promise<Omit<User, 'passwordHash'>> => {
+      const res = await db.user.create({
+         data: {
+            firstName: dto.firstName,
+            lastName: dto.lastName,
+            email: dto.email,
+            passwordHash: dto.passwordHash,
+         },
+      });
+
+      return {
+         ...res,
+         createdAt: res.createdAt.toISOString(),
+         lastLoginTime: res.lastLoginTime.toISOString(),
+      };
+   };
+
+   emailExists = async (email: string): Promise<boolean> => {
+      const res = await db.user.findUnique({ where: { email } });
+      return res ? true : false;
+   };
+
+   retriveUserByEmail = async (email: string): Promise<User | null> => {
+      const res = await db.user.findUnique({
+         where: { email },
+      });
+
+      if (!res) return null;
+
+      return {
+         ...res,
+         createdAt: res.createdAt.toISOString(),
+         lastLoginTime: res.lastLoginTime.toISOString(),
+         passwordHash: res.passwordHash ?? undefined,
+      };
+   };
+   getUserStatusById = async (userId: string): Promise<Pick<User, 'id' | 'isBlocked'> | null> => {
+      const res = await db.user.findUnique({
+         where: { id: userId },
+         select: { id: true, isBlocked: true },
+      });
+
+      if (!res) return null;
+
+      return { id: res.id, isBlocked: res.isBlocked };
+   };
+
+   changePassword = async (
+      email: string,
+      newPasswordHash: string
+   ): Promise<Pick<User, 'email'> | null> => {
+      const res = await db.user.update({
+         where: { email },
+         data: { passwordHash: newPasswordHash },
+      });
+
+      if (!res) return null;
+
+      return { email: res.email };
+   };
+
+   googleAuthCreate = async (dto: googleAuthDTO): Promise<Omit<User, 'passwordHash'>> => {
+      const res = await db.user.create({ data: { firstName: dto.firstName, email: dto.email } });
+      return {
+         ...res,
+         createdAt: res.createdAt.toISOString(),
+         lastLoginTime: res.lastLoginTime.toISOString(),
+      };
+   };
+
+   getUserList = async (
+      dto: GetUserDTO & { skip: number }
+   ): Promise<{ users: AdminGetUserResponseDTO[]; totalEntries: number }> => {
+      const searchQuery = dto.searchQuery?.toLocaleLowerCase() || '';
+
+      const whereClause: NonNullable<Parameters<typeof db.user.findMany>[0]>['where'] = searchQuery
+         ? {
+              OR: [
+                 { firstName: { contains: searchQuery, mode: 'insensitive' } },
+                 { lastName: { contains: searchQuery, mode: 'insensitive' } },
+                 { email: { contains: searchQuery, mode: 'insensitive' } },
+              ],
+           }
+         : {};
+
+      const [userlist, totalEntries] = await Promise.all([
+         db.user.findMany({
+            where: whereClause,
+            omit: { passwordHash: true },
+            skip: dto.skip,
+            take: dto.limit,
+         }),
+         db.user.count({ where: whereClause }),
+      ]);
+
+      const parsedUserList: AdminGetUserResponseDTO[] = userlist.map((user) => ({
+         email: user.email,
+         id: user.id,
+         firstName: user.firstName,
+         lastName: user.lastName ?? undefined,
+         isBlocked: user.isBlocked,
+         isHotUser: user.isHotUser,
+         createdAt: user.createdAt.toISOString(),
+         humaneScore: user.humaneScore,
+      }));
+
+      return { users: parsedUserList, totalEntries };
+   };
+
+   getUserListByIds = async (userIds: string[]): Promise<AdminGetUserResponseDTO[]> => {
+      const res = await db.user.findMany({
+         where: {
+            id: { in: userIds },
+         },
+         select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            isBlocked: true,
+            isHotUser: true,
+            createdAt: true,
+            humaneScore: true,
+         },
+      });
+      const parsedUserList: AdminGetUserResponseDTO[] = res.map((user) => ({
+         email: user.email,
+         id: user.id,
+         firstName: user.firstName,
+         lastName: user.lastName ?? undefined,
+         isBlocked: user.isBlocked,
+         isHotUser: user.isHotUser,
+         createdAt: user.createdAt.toISOString(),
+         humaneScore: user.humaneScore,
+      }));
+
+      return parsedUserList;
+   };
+
+   updateBlockStatus = async (
+      userId: string,
+      newStatus: boolean
+   ): Promise<AdminGetUserResponseDTO | null> => {
+      const res = await db.user.update({ where: { id: userId }, data: { isBlocked: newStatus } });
+      if (!res) return null;
+
+      return {
+         id: res.id,
+         firstName: res.firstName,
+         lastName: res.lastName ?? undefined,
+         email: res.email,
+         isBlocked: res.isBlocked,
+         isHotUser: res.isHotUser,
+         createdAt: res.createdAt.toUTCString(),
+         humaneScore: res.humaneScore,
+      };
+   };
+
+   retriveUserById = async (userId: string): Promise<User | null> => {
+      const res = await db.user.findUnique({ where: { id: userId } });
+      if (!res) return null;
+
+      return new User(
+         res.id,
+         res.firstName,
+         res.email,
+         res.isEmailVerified,
+         res.isBlocked,
+         res.humaneScore,
+         res.isHotUser,
+         res.createdAt.toUTCString(),
+         res.lastLoginTime.toUTCString(),
+         res.avatarKey ?? undefined,
+         res.coverPhotoKey ?? undefined,
+         res.lastName ?? undefined,
+         res.passwordHash ?? undefined,
+         res.bio
+      );
+   };
+   updateNameAndBio = async (
+      userId: string,
+      firstName: string,
+      lastName: string,
+      bio: string
+   ): Promise<Omit<User, 'passwordHash'> | null> => {
+      const res = await db.user.update({
+         where: { id: userId },
+         data: { firstName, lastName, bio },
+      });
+
+      if (!res) return null;
+
+      return {
+         ...res,
+         createdAt: res.createdAt.toISOString(),
+         lastLoginTime: res.lastLoginTime.toISOString(),
+      };
+   };
+   updateAvatar = async (
+      userId: string,
+      newAvatarKey: string
+   ): Promise<{ updatedAvatarKey: string } | null> => {
+      const res = await db.user.update({
+         where: { id: userId },
+         data: { avatarKey: newAvatarKey },
+         select: { avatarKey: true },
+      });
+
+      if (!res) return null;
+
+      return { updatedAvatarKey: res.avatarKey as string };
+   };
+   updateCoverPhoto = async (
+      userId: string,
+      newCoverPhotoKey: string
+   ): Promise<{ updatedCoverPhotoKey: string } | null> => {
+      const res = await db.user.update({
+         where: { id: userId },
+         data: { coverPhotoKey: newCoverPhotoKey },
+         select: { coverPhotoKey: true },
+      });
+
+      if (!res) return null;
+      return { updatedCoverPhotoKey: res.coverPhotoKey as string };
+   };
+
+   isHotUser = async (userId: string): Promise<boolean | null> => {
+      const res = await db.user.findUnique({
+         where: { id: userId },
+         select: { isHotUser: true },
+      });
+
+      return res?.isHotUser ?? null;
+   };
+}

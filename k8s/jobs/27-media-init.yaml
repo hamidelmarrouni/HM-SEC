@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: media-init
+  namespace: hm-sec
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: media-init
+        hmsec.network/zone: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      containers:
+        - name: media-init
+          image: alpine:3.20
+          command: ["/bin/sh", "-ec", "mkdir -p /data/media && chmod 0775 /data/media && echo '[media-init] PVC ready'"]
+          volumeMounts:
+            - name: media
+              mountPath: /data/media
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: hm-sec-media

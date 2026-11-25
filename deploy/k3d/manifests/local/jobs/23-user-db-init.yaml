@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: user-db-init
+  namespace: hm-sec
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: user-db-init
+        hmsec.network/zone: app
+    spec:
+      restartPolicy: Never
+      serviceAccountName: hm-sec-app
+      automountServiceAccountToken: false
+      containers:
+      - name: user-db-init
+        image: hm-sec/user-service:docker-v1
+        imagePullPolicy: Never
+        env:
+        - name: HMSEC_POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_USER
+        - name: HMSEC_POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_PASSWORD
+        - name: HMSEC_POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: hm-sec-db-secrets
+              key: HMSEC_POSTGRES_DB
+        - name: POSTGRES_URI
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=user_service
+        - name: DATABASE_URL
+          value: postgresql://$(HMSEC_POSTGRES_USER):$(HMSEC_POSTGRES_PASSWORD)@postgres:5432/$(HMSEC_POSTGRES_DB)?schema=user_service
+        command:
+        - npx
+        - prisma
+        - db
+        - push
+        - --schema
+        - prisma/schema.prisma
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+  activeDeadlineSeconds: 3600

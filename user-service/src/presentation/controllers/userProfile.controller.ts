@@ -1,0 +1,171 @@
+import { AuthorizationError } from '@application/errors/AuthorizationError';
+import { generatePresignedURLInputSchema } from '@application/DTO-mapper/user/generatePreSignedURL.input.dto';
+import { getCurrentAnonProfileSchema } from '@application/DTO-mapper/user/getCurrentAnonProfile.input.dto';
+import { updateUserCoverPhotoSchema } from '@application/DTO-mapper/user/updateUserCoverPhoto.input.dto';
+import { updateUserProfileSchema } from '@application/DTO-mapper/user/updateUserProfile.input.dto';
+import { updateUserAvatarSchema } from '@application/DTO-mapper/user/updateAnonProfileAvatar.input.dto';
+import { ZodValidationError } from '@presentation/errors/ZodValidationError';
+import { NextFunction, Request, Response } from 'express';
+import { HttpStatusCode } from 'axios';
+import { IGetCurrentUserProfile } from '@ports/usecases/user/IGetCurrentUserProfile';
+import { IUpdateUserProfile } from '@ports/usecases/user/IUpdateUserProfile';
+import { IUpdateUserAvatar } from '@ports/usecases/user/IUpdateUserAvatar';
+import { IUpdateUserCoverPhoto } from '@ports/usecases/user/IUpdateUserCoverPhoto';
+import { IGeneratePresignedURL } from '@ports/usecases/user/IGeneratePresignedURL';
+import { IUserProfileController } from '@presentation/interface/IUserProfile.controller';
+import { UnAuthenticatedError } from 'humane-common';
+import { ChangePasswordInputDTO, changePasswordInputSchema } from '@application/DTO-mapper/user/ChangePassword.dto';
+import { IChangePassword } from '@ports/usecases/user/ChangePassword.usecase';
+
+export class UserProfileController implements IUserProfileController {
+   constructor(
+      private readonly _getCurrentUserProfile: IGetCurrentUserProfile,
+      private readonly _updateUserProfile: IUpdateUserProfile,
+      private readonly _generatePreSignedURL: IGeneratePresignedURL,
+      private readonly _updatUserAvatar: IUpdateUserAvatar,
+      private readonly _updateUserCoverPhoto: IUpdateUserCoverPhoto,
+      private readonly _changePassword: IChangePassword
+   ) {}
+
+   getProfile = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+         if (req.user?.type !== 'user') {
+            throw new AuthorizationError();
+         }
+
+         const parsed = getCurrentAnonProfileSchema.safeParse({
+            userId: req.user?.userId,
+         });
+
+         if (!parsed.success) {
+            throw new ZodValidationError(parsed.error);
+         }
+
+         const profile = await this._getCurrentUserProfile.execute(parsed.data);
+
+         res.status(HttpStatusCode.Ok).json({
+            data: { profile },
+         });
+      } catch (error) {
+         next(error);
+      }
+   };
+
+   updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+         if (req.user?.type !== 'user' || !req.user.userId) {
+            throw new AuthorizationError();
+         }
+
+         const parsed = updateUserProfileSchema.safeParse(req.body);
+         if (!parsed.success) {
+            throw new ZodValidationError(parsed.error);
+         }
+
+         const updatedProfile = await this._updateUserProfile.execute(req.user.userId, parsed.data);
+
+         res.status(HttpStatusCode.Ok).json({
+            data: { profile: updatedProfile },
+         });
+      } catch (error) {
+         next(error);
+      }
+   };
+
+   generatePreSignedURL = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+         const parsed = generatePresignedURLInputSchema.safeParse(req.body);
+         if (!parsed.success) {
+            throw new ZodValidationError(parsed.error);
+         }
+
+         const preSignedURL = await this._generatePreSignedURL.execute(parsed.data);
+
+         res.status(HttpStatusCode.Created).json({
+            data: {
+               preSignedURL,
+            },
+         });
+      } catch (error) {
+         next(error);
+      }
+   };
+
+   updateAvatarPhoto = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+         if (req.user?.type !== 'user' || !req.user.userId) {
+            throw new AuthorizationError();
+         }
+
+         const userId = req.user.userId;
+
+         const parsed = updateUserAvatarSchema.safeParse(req.body);
+         if (!parsed.success) {
+            throw new ZodValidationError(parsed.error);
+         }
+
+         const { updatedAvatarKey, newAvatarURL } = await this._updatUserAvatar.execute(
+            userId,
+            parsed.data
+         );
+
+         res.status(HttpStatusCode.Ok).json({
+            data: {
+               avatarKey: updatedAvatarKey,
+               avatarURL: newAvatarURL,
+            },
+         });
+      } catch (error) {
+         next(error);
+      }
+   };
+
+   updateCoverPhoto = async (req: Request, res: Response, next: NextFunction) => {
+      try {
+         if (req.user?.type !== 'user' || !req.user.userId) {
+            throw new AuthorizationError();
+         }
+
+         const userId = req.user.userId;
+
+         const parsed = updateUserCoverPhotoSchema.safeParse(req.body);
+         if (!parsed.success) {
+            throw new ZodValidationError(parsed.error);
+         }
+
+         const { updatedCoverPhotoKey, newCoverPhotoURL } =
+            await this._updateUserCoverPhoto.execute(userId, parsed.data);
+
+         res.status(HttpStatusCode.Ok).json({
+            data: {
+               coverPhoto: updatedCoverPhotoKey,
+               coverPhotoURL: newCoverPhotoURL,
+            },
+         });
+      } catch (error) {
+         next(error);
+      }
+   };
+
+   changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+      try {
+         if (req.user?.type !== 'user' || !req.user.userId) throw new UnAuthenticatedError();
+
+         console.log(req.body);
+
+         const dto: ChangePasswordInputDTO = {
+            userId: req.user.userId,
+            password: req.body?.password,
+            newPassword: req.body?.newPassword,
+         };
+
+         const { data: validatedDTO, error, success } = changePasswordInputSchema.safeParse(dto);
+         if (!success) throw new ZodValidationError(error);
+
+         const result = await this._changePassword.execute(validatedDTO);
+         res.status(HttpStatusCode.Accepted).json({ data: result });
+      } catch (error) {
+         next(error);
+      }
+   };
+}

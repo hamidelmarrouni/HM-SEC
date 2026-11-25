@@ -1,0 +1,28 @@
+# TEMPLATE ONLY. Replace hm-sec.example.com and provide a TLS Secret named
+# hm-sec-tls (or install cert-manager and use an Issuer/ClusterIssuer) before
+# applying. A trusted public certificate requires a domain that resolves to EC2.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: hm-sec-tls
+  namespace: hm-sec
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts: [hm-sec.example.com]
+      secretName: hm-sec-tls
+  rules:
+    - host: hm-sec.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: {service: {name: nginx-gateway, port: {number: 8080}}}
+          - path: /media
+            pathType: Prefix
+            backend: {service: {name: nginx-gateway, port: {number: 8080}}}
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: frontend, port: {number: 5173}}}

@@ -1,0 +1,246 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: hm-sec
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+  namespace: hm-sec
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: edge-ingress-from-traefik
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchExpressions:
+    - key: hmsec.network/zone
+      operator: In
+      values:
+      - edge
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: kube-system
+    ports:
+    - protocol: TCP
+      port: 5173
+    - protocol: TCP
+      port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: gateway-to-app
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchLabels:
+      app: nginx-gateway
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: app
+    ports:
+    - protocol: TCP
+      port: 3001
+    - protocol: TCP
+      port: 3002
+    - protocol: TCP
+      port: 3003
+    - protocol: TCP
+      port: 3004
+    - protocol: TCP
+      port: 3005
+    - protocol: TCP
+      port: 3006
+    - protocol: TCP
+      port: 3007
+    - protocol: TCP
+      port: 3008
+    - protocol: TCP
+      port: 3009
+    - protocol: TCP
+      port: 3010
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-ingress
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchLabels:
+      hmsec.network/zone: app
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: nginx-gateway
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: app
+    ports:
+    - protocol: TCP
+      port: 3001
+    - protocol: TCP
+      port: 3002
+    - protocol: TCP
+      port: 3003
+    - protocol: TCP
+      port: 3004
+    - protocol: TCP
+      port: 3005
+    - protocol: TCP
+      port: 3006
+    - protocol: TCP
+      port: 3007
+    - protocol: TCP
+      port: 3008
+    - protocol: TCP
+      port: 3009
+    - protocol: TCP
+      port: 3010
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: app-egress-internal
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchLabels:
+      hmsec.network/zone: app
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: app
+    ports:
+    - protocol: TCP
+      port: 3001
+    - protocol: TCP
+      port: 3002
+    - protocol: TCP
+      port: 3003
+    - protocol: TCP
+      port: 3004
+    - protocol: TCP
+      port: 3005
+    - protocol: TCP
+      port: 3006
+    - protocol: TCP
+      port: 3007
+    - protocol: TCP
+      port: 3008
+    - protocol: TCP
+      port: 3009
+    - protocol: TCP
+      port: 3010
+  - to:
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: data
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 27017
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9092
+    - protocol: TCP
+      port: 9093
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: data-ingress-from-app-and-data
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchLabels:
+      hmsec.network/zone: data
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: app
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: data
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 27017
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9092
+    - protocol: TCP
+      port: 9093
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: data-egress-internal
+  namespace: hm-sec
+spec:
+  podSelector:
+    matchLabels:
+      hmsec.network/zone: data
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          hmsec.network/zone: data
+    ports:
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 27017
+    - protocol: TCP
+      port: 6379
+    - protocol: TCP
+      port: 9092
+    - protocol: TCP
+      port: 9093

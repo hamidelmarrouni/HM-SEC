@@ -1,0 +1,38 @@
+# Apply this file only after moving HM_SEC to a multi-node cluster and raising
+# the selected workloads to at least 2 replicas. On a single EC2 node a strict
+# PDB can block node drain without adding real availability.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend
+  namespace: hm-sec
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: frontend}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-gateway
+  namespace: hm-sec
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: nginx-gateway}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service
+  namespace: hm-sec
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: user-service}}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: query-service
+  namespace: hm-sec
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: query-service}}

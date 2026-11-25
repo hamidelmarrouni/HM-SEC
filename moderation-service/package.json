@@ -1,0 +1,20 @@
+{
+  "name": "moderation-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start:hmsec": "tsx ./src/main.ts"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "humane-common": "1.0.110",
+    "kafkajs": "2.2.4"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "22.0.2",
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.30",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3"
+  }
+}

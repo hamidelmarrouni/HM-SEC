@@ -1,0 +1,73 @@
+import { CommnetLikeDTO } from '@application/dtos/CommentLike.dto';
+import { CombinedNotification } from '@domain/entities/CombinedNotification';
+import { CommentLikesNotification } from '@domain/entities/CommentLikesNotification';
+import { FriendReqAcceptedNotification } from '@domain/entities/FriendReqAcceptedNotification.entity';
+import {
+   FriendReqNotification,
+   FriendReqStatus,
+} from '@domain/entities/FriendReqNotification.entity';
+import { PostGotCommentNotification } from '@domain/entities/PostGotCommnetNotification';
+import { PostModerationFailedNotification } from '@domain/entities/PostModerationFailedNotification.entity';
+import { PostModerationFlaggedNotification } from '@domain/entities/PostModerationFlaggedNotification.entity';
+
+export interface INotificationRepository {
+   retriveFriendReqNoti(friendshipId: string): Promise<Required<FriendReqNotification> | null>;
+
+   createFriendReqNoti(friendReq: FriendReqNotification): Promise<Required<FriendReqNotification>>;
+
+   deleteFriendReqNoti(friendshipId: string): Promise<Required<FriendReqNotification> | null>;
+
+   updateFriendReqStatus(
+      friendshipId: string,
+      newStatus: (typeof FriendReqStatus)[keyof typeof FriendReqStatus]
+   ): Promise<Required<FriendReqNotification> | null>;
+
+   retriveRecentUserNotifications(
+      userId: string,
+      limit: number,
+      from?: string | null
+   ): Promise<{ noti: CombinedNotification[]; from: string | null; hasmore: boolean }>;
+
+   markAsRead(userId: string, fromId: string): Promise<void>;
+
+   retriveFriendReqAcceptedNoti(
+      friendshipId: string
+   ): Promise<Required<FriendReqAcceptedNotification> | null>;
+   createFriendReqAcceptedNoti(
+      friendReqAcceptedNoti: FriendReqAcceptedNotification
+   ): Promise<Required<FriendReqAcceptedNotification>>;
+
+   deleteFriendReqAcceptedNoti(
+      friendshipId: string
+   ): Promise<Required<FriendReqAcceptedNotification> | null>;
+
+   createPostGotCommentedNotification(
+      noti: PostGotCommentNotification
+   ): Promise<Required<PostGotCommentNotification>>;
+
+   deletePostGotCommentNotificationByCommentId(
+      commentId: string
+   ): Promise<Required<PostGotCommentNotification> | null>;
+
+   deletePostGotCommentNotificationsByPostId(postId: string): Promise<{ deletedCount: number }>;
+
+   upsertCommentLikesNotification(
+      newLike: CommnetLikeDTO,
+      noti: CommentLikesNotification
+   ): Promise<Required<CommentLikesNotification> | null>;
+
+   deleteALikeFromCommentLikesNotification(
+      likeToDelete: CommnetLikeDTO,
+      noti: CommentLikesNotification
+   ): Promise<Required<CommentLikesNotification> | null>;
+
+   deleteCommentLikesNotificationByCommentId(commentId: string): Promise<void>;
+
+   createPostModerationFailedNotification(
+      noti: PostModerationFailedNotification
+   ): Promise<Required<PostModerationFailedNotification>>;
+
+   createPostModerationFlaggedNotification(
+      noti: PostModerationFlaggedNotification
+   ): Promise<Required<PostModerationFlaggedNotification>>;
+}
