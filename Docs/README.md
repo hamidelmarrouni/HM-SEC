@@ -1,6 +1,6 @@
-# Humane Backend - Data Flow Documentation
+# HM-SEC Backend - Data Flow Documentation
 
-This document provides comprehensive documentation for all data flows in the Humane backend system, organized by feature categories.
+This document provides comprehensive documentation for all data flows in the HM-SEC backend system, organized by feature categories.
 
 ## Table of Contents
 
@@ -217,7 +217,7 @@ Handles the recipient accepting an incoming call and establishing the WebRTC pee
 ![System Architecture](./system-design.svg)
 
 **Overview:**
-High-level architecture of the Humane backend system showing service interactions and data flow.
+High-level architecture of the HM-SEC backend system showing service interactions and data flow.
 
 ### Core Services
 
@@ -258,7 +258,7 @@ High-level architecture of the Humane backend system showing service interaction
    - Tech: Node.js/TypeScript, FCM/APNs, email service
 
 7. **Reward Service**
-   - Gamification and humane score tracking
+   - Gamification and reward score tracking
    - Reward calculation and distribution
    - Tech: Node.js/TypeScript, PostgreSQL
 

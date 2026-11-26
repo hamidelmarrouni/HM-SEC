@@ -1,6 +1,6 @@
 ## Overview
 
-Humane is a real-time, privacy-focused, microservices-based social platform designed for authentic connections. The frontend is built with React (TypeScript) and supports posts, comments, chat, video calls, notifications, AI-powered content moderation, and Humane Points.
+HM-SEC is a real-time, privacy-focused, microservices-based social platform designed for authentic connections. The frontend is built with React (TypeScript) and supports posts, comments, chat, video calls, notifications, AI-powered content moderation, and Reward Points.
 
 ## Tech Stack
 
@@ -25,7 +25,7 @@ Humane is a real-time, privacy-focused, microservices-based social platform desi
 - Text, photo, and video posts
 - Friends-only or public visibility
 - Comment & like system
-- **Humane Points** for creator-approved comments
+- **Reward Points** for creator-approved comments
 - **Moderation-aware publishing:**
   - New posts = `processing` state until CNN moderation is complete
   - UI badge: _“Under Review”_
@@ -110,9 +110,9 @@ src/
 ## Development Setup
 
 ```bash
-git clone https://github.com/abhiram-ar/humane-frontend
-cd humane-frontend
-npm install
+git clone git@github.com:hamidelmarrouni/HM-SEC.git
+cd HM-SEC/frontend
+npm ci
 ```
 
 `.env` example:

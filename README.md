@@ -2,7 +2,7 @@
 
 A portable local deployment of the social application, packaged with Docker Compose and an optional Kubernetes/k3d lab.
 
-HM-SEC brings the frontend, ten backend services, gateway, databases, and deployment tooling into one repository. The application is derived from Humane; HM-SEC focuses on packaging, local deployment, and infrastructure. See [THIRD_PARTY.md](THIRD_PARTY.md) and the original [ISC license](LICENSE).
+HM-SEC brings the frontend, ten backend services, gateway, databases, and deployment tooling into one repository, with a focus on portable deployment and infrastructure. See [LICENSE](LICENSE) for licensing terms.
 
 ## Run locally
 
@@ -100,13 +100,12 @@ The installer can install system packages and downloads verified local tools. Re
 ```text
 frontend/             Browser application
 *-service/            Backend services
-humane-common/        Included shared-source reference (services use locked npm package)
 docker/               Gateway and database initialization
 scripts/              Portable launcher and application smoke tests
 k8s/                  Kubernetes baseline manifests
 deploy/k3d/           Optional local Kubernetes tools and regression tests
 docs/                 Current verification and screenshots
-Docs/                 Upstream architecture and design references
+Docs/                 Architecture and design references
 runtime/              Private local state (excluded from Git except empty media directory)
 ```
 

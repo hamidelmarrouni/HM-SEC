@@ -1,6 +1,6 @@
 ## Responsibility
 
-This service moderates media content on the Humane platform by:
+This service moderates media content on the HM-SEC platform by:
 
 -  Consuming media creation events
 -  Processing content through moderation pipelines

@@ -59,7 +59,7 @@ Purpose: Manages post, comments, hashtag, and likes.
 ### Why cant we combine all the comumers when comments are liked
 
 -  We need to update the like count as fast as possible.
--  Checking the user should recive humane point, will take some time, so it is processed async
+-  Checking whether the user should receive reward points takes some time, so it is processed asynchronously
 -  For high-throughput systems transactions are expensive so we are not combining all these ops into a transaction
 -  So I Decided to have two seperate comsumer to work on comment.created event
 
