@@ -3,7 +3,7 @@
 HM-SEC is a local development lab, not a hardened production deployment.
 
 - Runtime secrets are randomly generated into `runtime/.env.docker`, excluded from Git.
-- Only the frontend and gateway publish ports, bound to loopback by default.
+- The frontend listens on all IPv4 interfaces on port 5173 and proxies API, sockets, and media on the same origin. The diagnostic gateway port 8080 remains on loopback by default. Use HMSEC_FRONTEND_BIND=127.0.0.1 for host-only access.
 - Databases have no published host ports. The Compose data network is internal.
 - Demo accounts share the locally generated seed password; the main demo account is also an administrator.
 - Development OTP is fixed; email uses console mode; OAuth is disabled; moderation auto-approves.

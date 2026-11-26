@@ -1,3 +1,4 @@
+import { BACKEND_BASE_URL } from "@/lib/urls";
 import { setCredentials } from "@/features/userAuth/redux/userAuthSlice";
 import { store } from "./../app/store/store";
 import { redirect } from "react-router";
@@ -10,7 +11,7 @@ export const onStartLoader = async () => {
   const token = store.getState().userAuth.token;
   if (!token) {
     try {
-      const res = await axios.get(`${import.meta.env.VITE_BACKEND_BASE_URL}/api/v1/global/auth/refresh`, {
+      const res = await axios.get(`${BACKEND_BASE_URL}/api/v1/global/auth/refresh`, {
         withCredentials: true,
       });
       if (res.data.data?.token) {

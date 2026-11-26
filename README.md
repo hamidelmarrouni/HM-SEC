@@ -14,7 +14,7 @@ python3 scripts/hmsec.py up
 
 On Windows PowerShell, use `py -3 scripts/hmsec.py up`. Run Docker Desktop with **Linux containers**. The same Python launcher is intended for Linux, macOS, and Windows; see the validation report for platforms actually tested.
 
-Open **http://127.0.0.1:5173**. Sign in with `HMSEC_SEED_EMAIL` and `HMSEC_SEED_PASSWORD` from `runtime/.env.docker`. The first run generates a different password and four authentication secrets for each checkout. Keep this file private. Demo users and the local admin share this generated password.
+Open **http://localhost:5173** on the host, or **http://YOUR_MACHINE_IP:5173** from another computer. The browser automatically uses that address for the API, chat, media, and shared post links; no IP configuration or rebuild is needed when the address changes. Sign in with `HMSEC_SEED_EMAIL` and `HMSEC_SEED_PASSWORD` from `runtime/.env.docker`. The first run generates a different password and four authentication secrets for each checkout. Keep this file private. Demo users and the local admin share this generated password.
 
 The first build downloads public images and locked npm dependencies. Allow several minutes, more on a slow connection. This is a full microservices stack: plan for around **8 GB of available Docker memory and 15 GB of free disk** as a starting budget, not a measured minimum. A 16 GB host is preferable. ARM64, macOS, and Windows have not yet been verified; image and native dependency compatibility must be checked there. This does not run on literally every machine.
 
@@ -50,7 +50,7 @@ flowchart LR
 - **Frontend:** React, TypeScript, Vite, Tailwind CSS.
 - **Backend:** Node.js/TypeScript services; Socket.IO for chat and notifications.
 - **Data:** PostgreSQL with separate user/reward schemas, MongoDB replica set, Redis, Kafka.
-- **Edge:** Nginx gateway and a separate frontend container. Only ports 5173 and 8080 are published, on loopback by default.
+- **Edge:** Nginx gateway and a separate frontend container. Port 5173 listens on all IPv4 interfaces. It proxies API, WebSocket, and media requests internally; the optional diagnostic gateway port 8080 stays on loopback by default.
 - **Persistence:** Docker volumes for databases, Kafka logs, and uploaded media.
 - **Optional orchestration:** Kubernetes manifests, probes, RBAC, NetworkPolicies, PVCs, and local k3d tooling.
 
@@ -58,9 +58,27 @@ The local query service uses MongoDB; this Compose stack does not deploy Elastic
 
 ## Local demo boundaries
 
-This configuration is a development/demo lab. Email goes to console logs, Google OAuth is disabled, moderation auto-approves, and the development OTP is fixed. Local media upload is unauthenticated. Keep the default loopback bindings; production deployment needs a separate authentication, TLS, media-access, secret-management, and operations review. See [SECURITY.md](SECURITY.md).
+This configuration is a development/demo lab. Email goes to console logs, Google OAuth is disabled, moderation auto-approves, and the development OTP is fixed. Local media upload is unauthenticated. Use this only on trusted networks; production deployment needs a separate authentication, TLS, media-access, secret-management, and operations review. See [SECURITY.md](SECURITY.md).
 
-To use another host name or LAN address, set `HMSEC_PUBLIC_HOST` and the bind settings in `runtime/.env.docker`, then rerun `up`. Frontend API URLs are injected when the container starts. Changing bind settings exposes the demo to that network.
+### Automatic network access
+
+Use `http://<any reachable IPv4 address of this machine>:5173`, including LAN or VPN addresses.
+All browser requests stay on that same origin. Changing Wi-Fi/DHCP addresses does not require
+editing `.env` or rebuilding images. Other computers must be able to route to the host and
+reach TCP port 5173; this does not bypass firewalls or provide internet port forwarding.
+
+`HMSEC_FRONTEND_BIND=0.0.0.0` enables all IPv4 interfaces (the default). Set it to `127.0.0.1`
+for host-only access. `HMSEC_API_BIND=127.0.0.1` keeps the diagnostic port local; external
+clients use the frontend proxy on 5173. `HMSEC_PUBLIC_HOST` only provides a canonical address
+for legacy CORS settings and console email links; browser access no longer depends on it.
+Local email delivery and OAuth remain disabled. The optional Kubernetes profile has its own
+bind/port settings in `deploy/k3d/local.env`.
+
+To test a particular address:
+
+```sh
+python3 scripts/smoke.py --base-url http://YOUR_MACHINE_IP:5173
+```
 
 ## Kubernetes lab
 

@@ -1,3 +1,4 @@
+import { BACKEND_BASE_URL } from "@/lib/urls";
 import { store } from "@/app/store/store";
 import { setCredentials } from "@/features/userAuth/redux/userAuthSlice";
 import { JWTAuthPayload } from "@/types/JWTAuthPayload";
@@ -5,7 +6,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } f
 import { jwtDecode } from "jwt-decode";
 
 export const api: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_BACKEND_BASE_URL,
+  baseURL: BACKEND_BASE_URL,
   withCredentials: true,
   timeout: 10000, //10s
 });
@@ -69,7 +70,7 @@ api.interceptors.response.use(
       try {
         console.log("query failed, refreshing accessToken");
         const { data } = await axios.get<{ data: { token: string } }>(
-          `${import.meta.env.VITE_BACKEND_BASE_URL}/api/v1/global/auth/refresh`,
+          `${BACKEND_BASE_URL}/api/v1/global/auth/refresh`,
           { withCredentials: true },
         );
 

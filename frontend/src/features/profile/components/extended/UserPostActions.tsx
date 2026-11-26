@@ -1,3 +1,4 @@
+import { FRONTEND_BASE_URL } from "@/lib/urls";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,7 @@ const UserPostActions: React.FC<{ postId: string }> = ({ postId }) => {
   const handleCopyClipboard = async () => {
     try {
       await navigator.clipboard.writeText(
-        `${import.meta.env.VITE_FRONTEND_BASE_URL}/post/${postId}`,
+        `${FRONTEND_BASE_URL}/post/${postId}`,
       );
       toast.success("link copied", {
         position: "top-center",

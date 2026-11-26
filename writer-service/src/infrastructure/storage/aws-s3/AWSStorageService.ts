@@ -12,9 +12,9 @@ export class AWSStorageService implements IStorageService {
    ): Promise<{ preSignedURL: string; key: string } | null> => {
       const fullkey = `${userId}/${Date.now()}-${key}`;
       const localBase = process.env.HMSEC_LOCAL_MEDIA_UPLOAD_BASE_URL;
-      if (localBase) {
+      if (localBase !== undefined) {
          return {
-            preSignedURL: `${localBase}/api/v1/media/upload?key=${encodeURIComponent(fullkey)}`,
+            preSignedURL: `${localBase.replace(/\/+$/, '')}/api/v1/media/upload?key=${encodeURIComponent(fullkey)}`,
             key: fullkey,
          };
       }

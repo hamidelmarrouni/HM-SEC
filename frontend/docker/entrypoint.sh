@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-BACKEND_URL="${VITE_BACKEND_BASE_URL:-http://127.0.0.1:8080}"
-FRONTEND_URL="${VITE_FRONTEND_BASE_URL:-http://127.0.0.1:5173}"
+BACKEND_URL="${VITE_BACKEND_BASE_URL:-auto}"
+FRONTEND_URL="${VITE_FRONTEND_BASE_URL:-auto}"
 
 escape_sed_replacement() {
   printf '%s' "$1" | sed 's/[&|]/\\&/g'

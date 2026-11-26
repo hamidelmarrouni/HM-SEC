@@ -1,3 +1,4 @@
+import { BACKEND_BASE_URL } from "@/lib/urls";
 import { useAppDispatch, useAppSelector } from "@/features/userAuth/hooks/store.hooks";
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
@@ -35,7 +36,7 @@ const ChatSocketProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!token || type !== "user") return;
 
-    const socket: TypedChatSocket = io(import.meta.env.VITE_BACKEND_BASE_URL, {
+    const socket: TypedChatSocket = io(BACKEND_BASE_URL, {
       path: "/api/v1/chat/socket.io",
       // auth: { token }, // prod
       query: { token }, // dev - needed for kong

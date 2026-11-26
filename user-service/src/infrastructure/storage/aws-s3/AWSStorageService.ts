@@ -7,8 +7,8 @@ import s3Client from './s3-client';
 export class AWSStorageService implements IStorageService {
    generatePreSignedURL = async (key: string, mimeType: string): Promise<string | null> => {
       const localBase = process.env.HMSEC_LOCAL_MEDIA_UPLOAD_BASE_URL;
-      if (localBase) {
-         return `${localBase}/api/v1/media/upload?key=${encodeURIComponent(key)}`;
+      if (localBase !== undefined) {
+         return `${localBase.replace(/\/+$/, '')}/api/v1/media/upload?key=${encodeURIComponent(key)}`;
       }
 
       try {

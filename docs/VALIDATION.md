@@ -1,6 +1,6 @@
 # Verification record
 
-Prepared on 25 November 2026 on Linux x86_64.
+Prepared on 25 November 2026; network access rechecked on 26 November 2026 on Linux x86_64.
 
 ## Completed
 
@@ -25,15 +25,21 @@ Prepared on 25 November 2026 on Linux x86_64.
 - Screenshot: `docs/screenshots/home.jpg`.
 - The initial npm download connection reset was resolved by retrying with a shared cache,
   limited fetch concurrency, and retry handling.
-- The full scripted API smoke test could not run because the execution sandbox denied socket
-  access. Its test coverage is available in `scripts/smoke.py`, but is not claimed as passed.
+- Automatic address support was rebuilt and deployed: frontend listens on all IPv4 interfaces,
+  and API, media, and WebSocket traffic use the frontend origin on port 5173.
+- The full smoke suite passed through loopback, the host's LAN IP, and its Tailscale IP:
+  frontend/gateway health, user/admin login, refresh cookies, public queries, chat and
+  notification polling plus HTTP 101 WebSocket upgrades, relative profile/post upload URLs,
+  and media upload/readback.
+- The launcher configuration regression test and frontend TypeScript/production build passed.
+- These address checks ran from the server; connectivity from another physical computer
+  still depends on its network route, firewall, and VPN permissions.
 
-## GitHub upload status
+## GitHub
 
-SSH authentication succeeded as `hamidelmarrouni`. The target repository was initially
-unavailable. After the user reported creating it, automated commit/push was blocked before
-execution because the approval-review service hit its usage limit. No commit or push was
-completed by this session. Use the commands in `UPLOAD_TO_GITHUB.md` to finish manually.
+The initial project commit was verified on the repository's main branch over SSH.
+The automatic-address change follows that existing repository history. Runtime secrets
+and machine-specific environment settings remain excluded from Git.
 
 ## Not verified
 

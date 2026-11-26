@@ -53,7 +53,7 @@ def main():
         compose('config', '--quiet')
         compose('build')
         compose('up', '-d', '--wait', '--wait-timeout', '600')
-        print('HM-SEC is ready at http://127.0.0.1:5173 (or your configured public host).')
+        print('HM-SEC is ready at http://localhost:5173 or http://<this-machine-IP>:5173.')
         print('Use HMSEC_SEED_EMAIL and HMSEC_SEED_PASSWORD from runtime/.env.docker to sign in.')
     elif args.command == 'stop':
         compose('stop')

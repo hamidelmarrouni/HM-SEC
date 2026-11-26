@@ -1,3 +1,4 @@
+import { BACKEND_BASE_URL } from "@/lib/urls";
 import React, { ComponentProps, useEffect } from "react";
 import SidebarMenuItem from "./SidebarMenuItem";
 import { useAppDispatch, useAppSelector } from "@/features/userAuth/hooks/store.hooks";
@@ -40,7 +41,7 @@ const NotificationSidebarMenuItem: React.FC<ComponentProps<typeof SidebarMenuIte
   useEffect(() => {
     if (!token) return;
     const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
-      import.meta.env.VITE_BACKEND_BASE_URL,
+      BACKEND_BASE_URL,
       {
         path: "/api/v1/notification/socket.io",
         // auth: { token },
