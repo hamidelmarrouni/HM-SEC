@@ -1,6 +1,5 @@
 import NumberFlow from "@number-flow/react";
 import React, { ComponentPropsWithoutRef } from "react";
-import humaneMinimalIcon from "@/assets/humaneMinimalLogo.ico";
 type Props = {
   score: number;
   showIcon?: boolean;
@@ -17,8 +16,8 @@ const HumaneScoreNumberFlow: React.FC<Props> = ({
       {showIcon && (
         <img
           className="-ms-1 -me-1 aspect-square h-full w-fit object-scale-down"
-          src={humaneMinimalIcon}
-          alt="icon"
+          src="/hmsec-icon.svg"
+          alt="HM-SEC rewards"
         />
       )}
       <NumberFlow className="text-pop-green" value={score} />
